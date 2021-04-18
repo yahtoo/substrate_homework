@@ -21,6 +21,13 @@ export function Main (props) {
   const [owner, setOwner] = useState('');
   const [block, setBlock] = useState(0);
 
+  const [formState, setFormState] = useState({ addressTo: null, amount: 0 });
+
+  const onChange = (_, data) =>
+    setFormState(prev => ({ ...prev, [data.state]: data.value }));
+
+  const { hash, receiver } = formState;
+
   // 被后续代码中的函数所访问的 `FileReader()` 实例。
   let fileReader;
 
@@ -125,6 +132,37 @@ export function Main (props) {
                   paramFields: [true]
                 }}
             />
+          </Form.Field>
+
+          <Form.Field>
+            <Input
+                type='text'
+                label='Your Hash'
+                placeholder='address'
+                state='hash'
+                onChange={onChange}
+            />
+            <Input
+              type='text'
+              label="receiver"
+              placeholder="receiver's account id"
+              state='receiver'
+              onChange={onChange}
+            />
+          </Form.Field>
+          <Form.Field>
+              <TxButton
+                  accountPair={accountPair}
+                  label='Transfer Claim'
+                  setStatus={setStatus}
+                  type='SIGNED-TX'
+                  attrs={{
+                      palletRpc: 'poeSpfModule',
+                      callable: 'transferClaim',
+                      inputParams: [hash, receiver],
+                      paramFields: [true, true]
+                  }}
+              />
           </Form.Field>
           {/* 交易的状态信息。 */}
           <div style={{ overflowWrap: 'break-word' }}>{status}</div>

@@ -41,6 +41,7 @@ decl_event!(
     {
         ClaimCreated(AccountId, Vec<u8>),
         ClaimRevoked(AccountId, Vec<u8>),
+        ClaimTransfer(AccountId, Vec<u8>, AccountId),
     }
 );
 
@@ -50,6 +51,7 @@ decl_error! {
         ProofAlreadyExist,
         ClaimNotExist,
         NotClaimOwner,
+        OwnerEqualReceiver,
     }
 }
 
@@ -93,5 +95,28 @@ decl_module! {
 
             Ok(())
         }
+
+        #[weight = 0]
+        pub fn transfer_claim(origin, claim: Vec<u8>, receiver: T::AccountId) -> dispatch::DispatchResult {
+            let sender = ensure_signed(origin)?;
+
+            ensure!(Proofs::<T>::contains_key(&claim), Error::<T>::ClaimNotExist);
+
+            let (owner, _block_number) = Proofs::<T>::get(&claim);
+
+            ensure!((owner == sender), Error::<T>::NotClaimOwner);
+
+            // 如果转给自己，就返回一个错误：所有者和接收者是相同的
+            ensure!((owner != receiver), Error::<T>::OwnerEqualReceiver);
+
+            // 保存新的存证，存证所有者为接收者参数的值，会直接覆盖旧值，map修改值的方法有2:insert and mutate
+            Proofs::<T>::insert(&claim, (receiver.clone(), frame_system::Module::<T>::block_number()));
+
+            // 事件，表示sender把claim转移给receiver
+            Self::deposit_event(RawEvent::ClaimTransfer(sender, claim, receiver));
+
+            Ok(())
+        }
+
     }
 }
